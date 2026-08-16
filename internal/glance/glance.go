@@ -313,6 +313,11 @@ func (p *page) updateWidgetsWithinDuration(duration time.Duration) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			widget.lock()
+			defer widget.unlock()
+			if !widget.requiresUpdateWithin(&now, duration) {
+				return
+			}
 			widget.update(context)
 		}()
 	}
@@ -328,6 +333,11 @@ func (p *page) updateWidgetsWithinDuration(duration time.Duration) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				widget.lock()
+				defer widget.unlock()
+				if !widget.requiresUpdateWithin(&now, duration) {
+					return
+				}
 				widget.update(context)
 			}()
 		}
@@ -669,8 +679,6 @@ func (a *application) refreshAllOutdatedWidgets() {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				p.mu.Lock()
-				defer p.mu.Unlock()
 				// Use predictive refresh: update widgets that will be outdated before next cycle
 				p.updateWidgetsWithinDuration(refreshInterval)
 			}()
