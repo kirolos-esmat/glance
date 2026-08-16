@@ -513,7 +513,7 @@ pages:
 ```yaml
 services:
   glance:
-    image: glance-test-build:latest
+    image: ghcr.io/kirolos-esmat/glance:latest
     container_name: glance
     restart: unless-stopped
     ports:

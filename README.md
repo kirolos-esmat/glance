@@ -156,7 +156,7 @@ Create a `docker-compose.yml` file with the following contents:
 services:
   glance:
     container_name: glance
-    image: glance:latest
+    image: ghcr.io/kirolos-esmat/glance:latest
     restart: unless-stopped
     volumes:
       - ./config/glance.yml:/app/config/glance.yml:ro
