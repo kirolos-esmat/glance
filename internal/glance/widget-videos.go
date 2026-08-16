@@ -308,7 +308,7 @@ func fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate 
 		return nil, errNoContent
 	}
 
-<<<<<<< HEAD
+
 	if useDearrowTitles || useDearrowThumbnails {
 		if dearrowTitlesInstanceUrl == "" {
 			dearrowTitlesInstanceUrl = "https://sponsor.ajay.app"

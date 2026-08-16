@@ -49,7 +49,6 @@ const (
 	dnsServicePihole   = "pihole"
 	dnsServicePiholeV6 = "pihole-v6"
 	dnsServiceTechnitium = "technitium"
-	dnsServiceTechnitium = "technitium"
 	dnsServiceControld   = "controld"
 )
 
