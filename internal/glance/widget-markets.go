@@ -156,6 +156,7 @@ type marketResponseJson struct {
 				Symbol             string  `json:"symbol"`
 				RegularMarketPrice float64 `json:"regularMarketPrice"`
 				ChartPreviousClose float64 `json:"chartPreviousClose"`
+				ExchangeName       string  `json:"exchangeName"`
 				ShortName          string  `json:"shortName"`
 				PriceHint          int     `json:"priceHint"`
 			} `json:"meta"`
@@ -235,6 +236,11 @@ func fetchMarketsDataFromYahoo(marketRequests []marketRequest, interval MarketDu
 				response.Chart.Result[0].Meta.RegularMarketPrice *= exchangeRate
 				currency = currencyToSymbol[marketRequests[i].Currency]
 			}
+		}
+
+		// See https://github.com/glanceapp/glance/issues/757
+		if result.Meta.ExchangeName == "LSE" {
+			currency = ""
 		}
 
 		markets = append(markets, market{

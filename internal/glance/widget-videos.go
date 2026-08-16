@@ -35,6 +35,9 @@ type videosWidget struct {
 	UseDearrowThumbnails         bool      `yaml:"use-dearrow-thumbnails"`
 	DearrowTitlesInstanceUrl     string    `yaml:"dearrow-titles-instance-url"`
 	DearrowThumbnailsInstanceUrl string    `yaml:"dearrow-thumbnails-instance-url"`
+	SortBy                       string    `yaml:"sort-by"`
+
+	Filters filterableFields[video] `yaml:"filters"`
 }
 
 func (widget *videosWidget) initialize() error {
@@ -68,11 +71,13 @@ func (widget *videosWidget) initialize() error {
 }
 
 func (widget *videosWidget) update(ctx context.Context) {
-	videos, err := fetchYoutubeChannelUploads(widget.Channels, widget.VideoUrlTemplate, widget.IncludeShorts, widget.UseDearrowTitles, widget.UseDearrowThumbnails, widget.DearrowTitlesInstanceUrl, widget.DearrowThumbnailsInstanceUrl)
+	videos, err := fetchYoutubeChannelUploads(widget.Channels, widget.VideoUrlTemplate, widget.IncludeShorts, widget.UseDearrowTitles, widget.UseDearrowThumbnails, widget.DearrowTitlesInstanceUrl, widget.DearrowThumbnailsInstanceUrl, widget.SortBy)
 
 	if !widget.canContinueUpdateAfterHandlingErr(err) {
 		return
 	}
+
+	videos = widget.Filters.Apply(videos)
 
 	if len(videos) > widget.Limit {
 		videos = videos[:widget.Limit]
@@ -102,6 +107,7 @@ type youtubeFeedResponseXml struct {
 	Videos      []struct {
 		Title     string `xml:"title"`
 		Published string `xml:"published"`
+		Updated   string `xml:"updated"`
 		Link      struct {
 			Href string `xml:"href,attr"`
 		} `xml:"link"`
@@ -192,11 +198,25 @@ type video struct {
 	Author       string
 	AuthorUrl    string
 	TimePosted   time.Time
+	TimeUpdated  time.Time
+}
+
+func (v video) filterableField(field string) any {
+	switch field {
+	case "title":
+		return v.Title
+	case "posted":
+		return v.TimePosted
+	case "updated":
+		return v.TimeUpdated
+	default:
+		return nil
+	}
 }
 
 type videoList []video
 
-func (v videoList) sortByNewest() videoList {
+func (v videoList) sortByPosted() videoList {
 	sort.Slice(v, func(i, j int) bool {
 		return v[i].TimePosted.After(v[j].TimePosted)
 	})
@@ -204,14 +224,21 @@ func (v videoList) sortByNewest() videoList {
 	return v
 }
 
-func fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate string, includeShorts bool, useDearrowTitles bool, useDearrowThumbnails bool, dearrowTitlesInstanceUrl string, dearrowThumbnailsInstanceUrl string) (videoList, error) {
+func (v videoList) sortByUpdated() videoList {
+	sort.Slice(v, func(i, j int) bool {
+		return v[i].TimeUpdated.After(v[j].TimeUpdated)
+	})
+
+	return v
+}
+
+func fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate string, includeShorts bool, useDearrowTitles bool, useDearrowThumbnails bool, dearrowTitlesInstanceUrl string, dearrowThumbnailsInstanceUrl string, sortBy string) (videoList, error) {
 	requests := make([]*http.Request, 0, len(channelOrPlaylistIDs))
 
 	for i := range channelOrPlaylistIDs {
 		var feedUrl string
-		if strings.HasPrefix(channelOrPlaylistIDs[i], videosWidgetPlaylistPrefix) {
-			feedUrl = "https://www.youtube.com/feeds/videos.xml?playlist_id=" +
-				strings.TrimPrefix(channelOrPlaylistIDs[i], videosWidgetPlaylistPrefix)
+		if after, ok := strings.CutPrefix(channelOrPlaylistIDs[i], videosWidgetPlaylistPrefix); ok {
+			feedUrl = "https://www.youtube.com/feeds/videos.xml?playlist_id=" + after
 		} else if !includeShorts && strings.HasPrefix(channelOrPlaylistIDs[i], "UC") {
 			playlistId := strings.Replace(channelOrPlaylistIDs[i], "UC", "UULF", 1)
 			feedUrl = "https://www.youtube.com/feeds/videos.xml?playlist_id=" + playlistId
@@ -272,6 +299,7 @@ func fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate 
 				Author:       response.Channel,
 				AuthorUrl:    authorUrl,
 				TimePosted:   parseYoutubeFeedTime(v.Published),
+				TimeUpdated:  parseYoutubeFeedTime(v.Updated),
 			})
 		}
 	}
@@ -280,6 +308,7 @@ func fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate 
 		return nil, errNoContent
 	}
 
+<<<<<<< HEAD
 	if useDearrowTitles || useDearrowThumbnails {
 		if dearrowTitlesInstanceUrl == "" {
 			dearrowTitlesInstanceUrl = "https://sponsor.ajay.app"
@@ -369,7 +398,15 @@ func fetchYoutubeChannelUploads(channelOrPlaylistIDs []string, videoUrlTemplate 
 		}
 	}
 
-	videos.sortByNewest()
+	switch sortBy {
+	case "none":
+	case "updated":
+		videos.sortByUpdated()
+	case "posted":
+		videos.sortByPosted()
+	default: // "posted"
+		videos.sortByPosted()
+	}
 
 	if failed > 0 {
 		return videos, fmt.Errorf("%w: missing videos from %d channels", errPartialContent, failed)

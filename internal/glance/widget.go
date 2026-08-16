@@ -74,6 +74,8 @@ func newWidget(widgetType string) (widget, error) {
 		w = &groupWidget{}
 	case "dns-stats":
 		w = &dnsStatsWidget{}
+	case "navidrome":
+		w = &navidromeWidget{}
 	case "split-column":
 		w = &splitColumnWidget{}
 	case "custom-api":
@@ -84,8 +86,12 @@ func newWidget(widgetType string) (widget, error) {
 		w = &serverStatsWidget{}
 	case "tautulli":
 		w = &tautulliWidget{}
+	case "torrents":
+		w = &torrentsWidget{}
 	case "to-do":
 		w = &todoWidget{}
+	case "trending-repositories":
+		w = &trendingRepositoriesWidget{}
 	case "truenas":
 		w = &trueNASWidget{}
 	default:
