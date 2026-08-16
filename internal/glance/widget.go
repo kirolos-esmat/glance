@@ -96,6 +96,8 @@ func newWidget(widgetType string) (widget, error) {
 		w = &trendingRepositoriesWidget{}
 	case "truenas":
 		w = &trueNASWidget{}
+	case "ghostfolio":
+		w = &ghostfolioWidget{}
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s", widgetType)
 	}

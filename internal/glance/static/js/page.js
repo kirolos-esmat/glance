@@ -829,6 +829,17 @@ async function setupTodos() {
     }
 }
 
+async function setupGhostfolios() {
+    const elems = Array.from(document.getElementsByClassName("ghostfolio"));
+    if (elems.length == 0) return;
+
+    const ghostfolio = await import('./ghostfolio.js');
+
+    for (let i = 0; i < elems.length; i++) {
+        ghostfolio.default(elems[i]);
+    }
+}
+
 function setupTruncatedElementTitles(root = document) {
     const elements = root.querySelectorAll(".text-truncate, .single-line-titles .title, .text-truncate-2-lines, .text-truncate-3-lines");
 
@@ -973,6 +984,7 @@ async function setupPage() {
         setupAnalogClocks();
         await setupCalendars();
         await setupTodos();
+        await setupGhostfolios();
         setupCarousels();
         setupSearchBoxes();
         setupNavbarShortcuts();
