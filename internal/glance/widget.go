@@ -92,6 +92,8 @@ func newWidget(widgetType string) (widget, error) {
 		w = &torrentsWidget{}
 	case "to-do":
 		w = &todoWidget{}
+	case "stack":
+		w = &stackWidget{}
 	case "trending-repositories":
 		w = &trendingRepositoriesWidget{}
 	case "truenas":
