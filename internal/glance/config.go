@@ -30,11 +30,13 @@ const (
 
 type config struct {
 	Server struct {
-		Host       string `yaml:"host"`
-		Port       uint16 `yaml:"port"`
-		Proxied    bool   `yaml:"proxied"`
-		AssetsPath string `yaml:"assets-path"`
-		BaseURL    string `yaml:"base-url"`
+		Host                     string        `yaml:"host"`
+		Port                     uint16        `yaml:"port"`
+		Proxied                  bool          `yaml:"proxied"`
+		AssetsPath               string        `yaml:"assets-path"`
+		BaseURL                  string        `yaml:"base-url"`
+		BackgroundRefreshEnabled bool          `yaml:"background-refresh-enabled"`
+		BackgroundRefreshInterval time.Duration `yaml:"background-refresh-interval"`
 	} `yaml:"server"`
 
 	Auth struct {
@@ -100,6 +102,8 @@ func newConfigFromYAML(contents []byte) (*config, error) {
 
 	config := &config{}
 	config.Server.Port = 8080
+	config.Server.BackgroundRefreshEnabled = false
+	config.Server.BackgroundRefreshInterval = 15 * time.Minute
 
 	err = yaml.Unmarshal(contents, config)
 	if err != nil {
