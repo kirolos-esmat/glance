@@ -94,6 +94,7 @@ func (r changeDetectionWatchList) sortByNewest() changeDetectionWatchList {
 
 type changeDetectionResponseJson struct {
 	Title        string `json:"title"`
+	PageTitle    string `json:"page_title"`
 	URL          string `json:"url"`
 	LastChanged  int64  `json:"last_changed"`
 	DateCreated  int64  `json:"date_created"`
@@ -171,6 +172,8 @@ func fetchWatchesFromChangeDetection(instanceURL string, linkURL string, request
 
 		if watchJson.Title != "" {
 			watch.Title = watchJson.Title
+		} else if watchJson.PageTitle != "" {
+			watch.Title = watchJson.PageTitle
 		} else {
 			watch.Title = strings.TrimPrefix(strings.Trim(stripURLScheme(watchJson.URL), "/"), "www.")
 		}
