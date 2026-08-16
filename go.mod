@@ -21,6 +21,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/arran4/golang-ical v0.3.2
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
