@@ -70,7 +70,7 @@ async function refreshWidget(id, force) {
     let html;
     try {
         const url = `${baseURL}/api/widgets/${encodeURIComponent(id)}/refresh${force ? "?force=1" : ""}`;
-        const res = await fetch(url, { credentials: "same-origin" });
+        const res = await fetch(url, { credentials: "same-origin", cache: "no-store" });
         if (!res.ok) {
             widgetEl.removeAttribute("aria-busy");
             // 404 means the widget id is unknown to the server (e.g., after a
