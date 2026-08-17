@@ -58,7 +58,7 @@ function stopInterval(id) {
 }
 
 async function refreshWidget(id, force) {
-    const widgetEl = document.querySelector(`.widget[data-widget-id="${CSS.escape(id)}"]`);
+    const widgetEl = document.querySelector(`.widget[data-widget-id="${id}"]`);
     if (widgetEl === null) {
         stopInterval(id);
         return;
@@ -87,7 +87,7 @@ async function refreshWidget(id, force) {
     }
 
     // Re-find in case something else swapped during the await.
-    const target = document.querySelector(`.widget[data-widget-id="${CSS.escape(id)}"]`);
+    const target = document.querySelector(`.widget[data-widget-id="${id}"]`);
     if (target === null) return;
 
     runWidgetCleanup(target);
