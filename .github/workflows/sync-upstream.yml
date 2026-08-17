@@ -1,0 +1,180 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-sync-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync with Upstream
+    runs-on: ubuntu-latest
+    steps:
+      - name: Synchronize Fork with Upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TARGET_BRANCH: main
+        run: |
+          set -euo pipefail
+          SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+
+          echo "==> Inspecting repository metadata for ${REPO}..."
+          REPO_DATA=$(gh api "repos/${REPO}")
+          IS_FORK=$(echo "$REPO_DATA" | jq -r '.fork')
+
+          if [ "$IS_FORK" != "true" ]; then
+            echo "::error::Repository ${REPO} is not a fork. Automatic synchronization stopped."
+            cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Branch: ${TARGET_BRANCH}
+
+          Status: ERROR
+
+          Repository is not a fork. Automatic synchronization stopped.
+          EOF
+            exit 1
+          fi
+
+          PARENT=$(echo "$REPO_DATA" | jq -r '.parent.full_name')
+          PARENT_OWNER=$(echo "$PARENT" | cut -d/ -f1)
+          REPO_OWNER=$(echo "$REPO" | cut -d/ -f1)
+
+          echo "Confirmed fork repository: ${REPO}"
+          echo "Determined upstream parent repository: ${PARENT}"
+
+          echo "==> Verifying upstream '${TARGET_BRANCH}' branch exists..."
+          if ! gh api "repos/${PARENT}/branches/${TARGET_BRANCH}" >/dev/null 2>&1; then
+            echo "::error::Branch '${TARGET_BRANCH}' does not exist on upstream repository ${PARENT}."
+            cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: ERROR
+
+          Branch '${TARGET_BRANCH}' does not exist in upstream repository ${PARENT}.
+          EOF
+            exit 1
+          fi
+
+          echo "==> Fetching current commit details..."
+          FORK_SHA=$(gh api "repos/${REPO}/commits/${TARGET_BRANCH}" --jq '.sha')
+          UPSTREAM_SHA=$(gh api "repos/${PARENT}/commits/${TARGET_BRANCH}" --jq '.sha')
+          FORK_SHORT="${FORK_SHA:0:7}"
+          UPSTREAM_SHORT="${UPSTREAM_SHA:0:7}"
+
+          echo "Fork commit: ${FORK_SHORT} (${FORK_SHA})"
+          echo "Upstream commit: ${UPSTREAM_SHORT} (${UPSTREAM_SHA})"
+
+          echo "==> Comparing upstream with fork..."
+          read -r STATUS AHEAD_BY BEHIND_BY < <(gh api "repos/${REPO}/compare/${PARENT_OWNER}:${TARGET_BRANCH}...${REPO_OWNER}:${TARGET_BRANCH}" --jq '[.status, .ahead_by, .behind_by] | @tsv')
+
+          echo "Comparison result: status=${STATUS}, ahead_by=${AHEAD_BY}, behind_by=${BEHIND_BY}"
+
+          case "$STATUS" in
+            identical)
+              echo "Fork is already up to date."
+              cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: UP TO DATE
+
+          The fork already matches upstream/${TARGET_BRANCH}.
+          No changes were made.
+          EOF
+              ;;
+
+            behind)
+              echo "Fork is behind upstream by ${BEHIND_BY} commit(s). Synchronizing safely..."
+              gh api -X POST "repos/${REPO}/merge-upstream" -f branch="${TARGET_BRANCH}" >/dev/null
+              NEW_FORK_SHA=$(gh api "repos/${REPO}/commits/${TARGET_BRANCH}" --jq '.sha')
+              NEW_FORK_SHORT="${NEW_FORK_SHA:0:7}"
+              echo "Fork successfully synchronized to ${NEW_FORK_SHORT}."
+
+              cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: SYNCED
+
+          Previous fork commit: ${FORK_SHORT}
+          New fork commit: ${NEW_FORK_SHORT}
+
+          Upstream contained new commits.
+          Fork successfully synchronized.
+          EOF
+              ;;
+
+            ahead)
+              echo "Fork contains custom commits not present in upstream. Manual intervention required."
+              cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: MANUAL INTERVENTION REQUIRED
+
+          The fork contains commits that are not present in upstream.
+
+          No changes were made.
+          No force push was performed.
+          EOF
+              ;;
+
+            diverged)
+              echo "Fork and upstream have diverged. Manual reconciliation required."
+              cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: DIVERGED
+
+          The fork and upstream contain different commits.
+
+          Automatic synchronization was intentionally stopped.
+
+          Manual merge/reconciliation is required.
+          EOF
+              ;;
+
+            *)
+              echo "::error::Unknown comparison status '${STATUS}'."
+              cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: ERROR
+
+          Unknown comparison status: ${STATUS}.
+          No changes were made.
+          EOF
+              exit 1
+              ;;
+          esac
