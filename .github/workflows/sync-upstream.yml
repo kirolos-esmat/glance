@@ -17,6 +17,12 @@ jobs:
     name: Sync with Upstream
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Fork Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ github.token }}
+
       - name: Synchronize Fork with Upstream
         env:
           GH_TOKEN: ${{ github.token }}
@@ -25,6 +31,10 @@ jobs:
         run: |
           set -euo pipefail
           SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+
+          # Configure Git Author
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           echo "==> Inspecting repository metadata for ${REPO}..."
           REPO_DATA=$(gh api "repos/${REPO}")
@@ -46,8 +56,6 @@ jobs:
           fi
 
           PARENT=$(echo "$REPO_DATA" | jq -r '.parent.full_name')
-          PARENT_OWNER=$(echo "$PARENT" | cut -d/ -f1)
-          REPO_OWNER=$(echo "$REPO" | cut -d/ -f1)
 
           echo "Confirmed fork repository: ${REPO}"
           echo "Determined upstream parent repository: ${PARENT}"
@@ -69,24 +77,30 @@ jobs:
             exit 1
           fi
 
-          echo "==> Fetching current commit details..."
-          FORK_SHA=$(gh api "repos/${REPO}/commits/${TARGET_BRANCH}" --jq '.sha')
-          UPSTREAM_SHA=$(gh api "repos/${PARENT}/commits/${TARGET_BRANCH}" --jq '.sha')
-          FORK_SHORT="${FORK_SHA:0:7}"
-          UPSTREAM_SHORT="${UPSTREAM_SHA:0:7}"
+          echo "==> Fetching upstream/${TARGET_BRANCH}..."
+          if git remote | grep -q "^upstream$"; then
+            git remote set-url upstream "https://github.com/${PARENT}.git"
+          else
+            git remote add upstream "https://github.com/${PARENT}.git"
+          fi
+          git fetch upstream "${TARGET_BRANCH}"
 
-          echo "Fork commit: ${FORK_SHORT} (${FORK_SHA})"
-          echo "Upstream commit: ${UPSTREAM_SHORT} (${UPSTREAM_SHA})"
+          echo "==> Aligning local branch to origin/${TARGET_BRANCH}..."
+          git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
 
-          echo "==> Comparing upstream with fork..."
-          read -r STATUS AHEAD_BY BEHIND_BY < <(gh api "repos/${REPO}/compare/${PARENT_OWNER}:${TARGET_BRANCH}...${REPO_OWNER}:${TARGET_BRANCH}" --jq '[.status, .ahead_by, .behind_by] | @tsv')
+          FORK_SHA=$(git rev-parse HEAD)
+          UPSTREAM_SHA=$(git rev-parse "upstream/${TARGET_BRANCH}")
+          FORK_SHORT=$(git rev-parse --short HEAD)
+          UPSTREAM_SHORT=$(git rev-parse --short "upstream/${TARGET_BRANCH}")
+          MERGE_BASE=$(git merge-base HEAD "upstream/${TARGET_BRANCH}")
 
-          echo "Comparison result: status=${STATUS}, ahead_by=${AHEAD_BY}, behind_by=${BEHIND_BY}"
+          echo "Fork commit (${TARGET_BRANCH}): ${FORK_SHORT} (${FORK_SHA})"
+          echo "Upstream commit (${TARGET_BRANCH}): ${UPSTREAM_SHORT} (${UPSTREAM_SHA})"
+          echo "Merge base commit: ${MERGE_BASE}"
 
-          case "$STATUS" in
-            identical)
-              echo "Fork is already up to date."
-              cat <<EOF >> "$SUMMARY_FILE"
+          if [ "$FORK_SHA" = "$UPSTREAM_SHA" ]; then
+            echo "Fork is already up to date with upstream."
+            cat <<EOF >> "$SUMMARY_FILE"
           ## Upstream Sync
 
           Repository: ${REPO}
@@ -98,34 +112,56 @@ jobs:
           The fork already matches upstream/${TARGET_BRANCH}.
           No changes were made.
           EOF
-              ;;
 
-            behind)
-              echo "Fork is behind upstream by ${BEHIND_BY} commit(s). Synchronizing safely..."
-              gh api -X POST "repos/${REPO}/merge-upstream" -f branch="${TARGET_BRANCH}" >/dev/null
-              NEW_FORK_SHA=$(gh api "repos/${REPO}/commits/${TARGET_BRANCH}" --jq '.sha')
-              NEW_FORK_SHORT="${NEW_FORK_SHA:0:7}"
-              echo "Fork successfully synchronized to ${NEW_FORK_SHORT}."
-
-              cat <<EOF >> "$SUMMARY_FILE"
+          elif [ "$MERGE_BASE" = "$UPSTREAM_SHA" ]; then
+            echo "Fork contains custom commits and already includes all latest upstream commits."
+            cat <<EOF >> "$SUMMARY_FILE"
           ## Upstream Sync
 
           Repository: ${REPO}
           Upstream: ${PARENT}
           Branch: ${TARGET_BRANCH}
 
-          Status: SYNCED
+          Status: UP TO DATE (FORK AHEAD)
+
+          The fork contains custom commits and already includes all latest upstream commits.
+          Upstream has no new commits to merge.
+          No changes were made.
+          EOF
+
+          elif [ "$MERGE_BASE" = "$FORK_SHA" ]; then
+            echo "Fork is behind upstream with no custom commits. Fast-forwarding..."
+            git merge --ff-only "upstream/${TARGET_BRANCH}"
+            git push origin "${TARGET_BRANCH}"
+            NEW_FORK_SHA=$(git rev-parse HEAD)
+            NEW_FORK_SHORT=$(git rev-parse --short HEAD)
+            echo "Fork successfully fast-forwarded to ${NEW_FORK_SHORT}."
+
+            cat <<EOF >> "$SUMMARY_FILE"
+          ## Upstream Sync
+
+          Repository: ${REPO}
+          Upstream: ${PARENT}
+          Branch: ${TARGET_BRANCH}
+
+          Status: SYNCED (FAST-FORWARD)
 
           Previous fork commit: ${FORK_SHORT}
           New fork commit: ${NEW_FORK_SHORT}
 
           Upstream contained new commits.
-          Fork successfully synchronized.
+          Fork successfully fast-forwarded.
           EOF
-              ;;
 
-            ahead)
-              echo "Fork contains custom commits not present in upstream. Manual intervention required."
+          else
+            echo "Fork and upstream have diverged. Attempting automatic non-conflicting merge..."
+            if git merge --no-edit -m "Merge upstream/${TARGET_BRANCH} into ${TARGET_BRANCH}" "upstream/${TARGET_BRANCH}"; then
+              echo "Merge succeeded without conflicts. Pushing to origin/${TARGET_BRANCH}..."
+              git push origin "${TARGET_BRANCH}"
+              NEW_FORK_SHA=$(git rev-parse HEAD)
+              NEW_FORK_SHORT=$(git rev-parse --short HEAD)
+              echo "Merge successfully pushed. New commit: ${NEW_FORK_SHORT}."
+
               cat <<EOF >> "$SUMMARY_FILE"
           ## Upstream Sync
 
@@ -133,17 +169,20 @@ jobs:
           Upstream: ${PARENT}
           Branch: ${TARGET_BRANCH}
 
-          Status: MANUAL INTERVENTION REQUIRED
+          Status: SYNCED (AUTO-MERGED)
 
-          The fork contains commits that are not present in upstream.
+          Previous fork commit: ${FORK_SHORT}
+          Upstream commit: ${UPSTREAM_SHORT}
+          New merge commit: ${NEW_FORK_SHORT}
 
-          No changes were made.
-          No force push was performed.
+          Upstream changes were automatically merged into fork with custom commits (clean non-conflicting merge).
           EOF
-              ;;
 
-            diverged)
-              echo "Fork and upstream have diverged. Manual reconciliation required."
+            else
+              echo "::error::Merge conflicts detected during automatic merge attempt."
+              CONFLICTED_FILES=$(git diff --name-only --diff-filter=U)
+              git merge --abort
+
               cat <<EOF >> "$SUMMARY_FILE"
           ## Upstream Sync
 
@@ -151,30 +190,19 @@ jobs:
           Upstream: ${PARENT}
           Branch: ${TARGET_BRANCH}
 
-          Status: DIVERGED
+          Status: MERGE CONFLICT (MANUAL RESOLUTION REQUIRED)
 
-          The fork and upstream contain different commits.
+          Automatic merge failed due to merge conflicts between upstream/${TARGET_BRANCH} and fork/${TARGET_BRANCH}.
 
-          Automatic synchronization was intentionally stopped.
+          ### Conflicted Files:
+          \`\`\`text
+          ${CONFLICTED_FILES}
+          \`\`\`
 
-          Manual merge/reconciliation is required.
-          EOF
-              ;;
-
-            *)
-              echo "::error::Unknown comparison status '${STATUS}'."
-              cat <<EOF >> "$SUMMARY_FILE"
-          ## Upstream Sync
-
-          Repository: ${REPO}
-          Upstream: ${PARENT}
-          Branch: ${TARGET_BRANCH}
-
-          Status: ERROR
-
-          Unknown comparison status: ${STATUS}.
-          No changes were made.
+          Automatic synchronization was safely aborted.
+          No force push or destructive reset was performed.
+          Manual conflict resolution is required.
           EOF
               exit 1
-              ;;
-          esac
+            fi
+          fi
