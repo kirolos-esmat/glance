@@ -1,4 +1,4 @@
-# Plex Media Server Active Sessions, Movies & TV Shows Widget (Dynamic Highlight)
+# Plex Media Server Live Sessions, Stream Details, Library Counts & Server Info
 - type: custom-api
   refresh-interval: 5s
   title: Plex Stats
@@ -8,11 +8,15 @@
     Accept: application/json
   subrequests:
     movies:
-      url: http://<PLEX_IP>:32400/library/sections/2/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0
+      url: http://<PLEX_IP>:32400/library/sections/1/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0
       headers:
         Accept: application/json
     shows:
-      url: http://<PLEX_IP>:32400/library/sections/3/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0
+      url: http://<PLEX_IP>:32400/library/sections/2/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0
+      headers:
+        Accept: application/json
+    server:
+      url: http://<PLEX_IP>:32400/
       headers:
         Accept: application/json
   template: |
@@ -31,3 +35,17 @@
         <div class="size-h6">SHOWS</div>
       </div>
     </div>
+    {{ if gt $activeStreams 0 }}
+    <div class="margin-top-10">
+      {{ range .JSON.Array "MediaContainer.Metadata" }}
+        <div class="flex justify-between align-center margin-top-5">
+          <span class="size-p color-highlight text-truncate" style="max-width: 65%;">{{ .String "title" }}</span>
+          <span class="size-h6 color-positive">{{ .String "User.title" }}</span>
+        </div>
+      {{ end }}
+    </div>
+    {{ else }}
+    <div class="text-center margin-top-10">
+      <span class="size-h6 color-subdue">{{ (.Subrequest "server").JSON.String "MediaContainer.friendlyName" }}</span>
+    </div>
+    {{ end }}
