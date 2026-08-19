@@ -1,0 +1,33 @@
+# Plex Media Server Active Sessions, Movies & TV Shows Widget (Dynamic Highlight)
+- type: custom-api
+  refresh-interval: 5s
+  title: Plex Stats
+  cache: 2s
+  url: http://<PLEX_IP>:32400/status/sessions
+  headers:
+    Accept: application/json
+  subrequests:
+    movies:
+      url: http://<PLEX_IP>:32400/library/sections/2/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0
+      headers:
+        Accept: application/json
+    shows:
+      url: http://<PLEX_IP>:32400/library/sections/3/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0
+      headers:
+        Accept: application/json
+  template: |
+    {{- $activeStreams := .JSON.Int "MediaContainer.size" -}}
+    <div class="flex justify-between text-center">
+      <div>
+        <div class="{{ if gt $activeStreams 0 }}color-positive{{ else }}color-highlight{{ end }} size-h3">{{ $activeStreams }}</div>
+        <div class="size-h6{{ if gt $activeStreams 0 }} color-positive{{ end }}">SESSIONS</div>
+      </div>
+      <div>
+        <div class="color-highlight size-h3">{{ (.Subrequest "movies").JSON.Int "MediaContainer.totalSize" }}</div>
+        <div class="size-h6">MOVIES</div>
+      </div>
+      <div>
+        <div class="color-highlight size-h3">{{ (.Subrequest "shows").JSON.Int "MediaContainer.totalSize" }}</div>
+        <div class="size-h6">SHOWS</div>
+      </div>
+    </div>
