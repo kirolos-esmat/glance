@@ -173,6 +173,7 @@ function setupSearchBoxes() {
 
                 lastQuery = query;
                 inputElement.value = "";
+                changeCurrentBang(null);
 
                 return;
             }

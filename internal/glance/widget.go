@@ -88,14 +88,10 @@ func newWidget(widgetType string) (widget, error) {
 		w = &serverStatsWidget{}
 	case "tautulli":
 		w = &tautulliWidget{}
-	case "torrents":
-		w = &torrentsWidget{}
 	case "to-do":
 		w = &todoWidget{}
 	case "stack":
 		w = &stackWidget{}
-	case "trending-repositories":
-		w = &trendingRepositoriesWidget{}
 	case "truenas":
 		w = &trueNASWidget{}
 	case "ghostfolio":

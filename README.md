@@ -185,6 +185,45 @@ docker compose logs -f
 </details>
 
 <details>
+<summary><strong>Docker compose manual</strong></summary>
+<br>
+
+Create a `docker-compose.yml` file with the following contents:
+
+```yaml
+services:
+  glance:
+    container_name: glance
+    image: glanceapp/glance
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+    ports:
+      - 8080:8080
+```
+
+Then, create a new directory called `config` and download the example starting [`glance.yml`](https://github.com/glanceapp/glance/blob/main/docs/glance.yml) file into it by running:
+
+```bash
+mkdir config && wget -O config/glance.yml https://raw.githubusercontent.com/glanceapp/glance/refs/heads/main/docs/glance.yml
+```
+
+Feel free to edit the `glance.yml` file to your liking, and when ready run:
+
+```bash
+docker compose up -d
+```
+
+If you encounter any issues, you can check the logs by running:
+
+```bash
+docker logs glance
+```
+
+<hr>
+</details>
+
+<details>
 <summary><strong>Manual binary installation</strong></summary>
 <br>
 

@@ -160,13 +160,3 @@ async function handleLoginAttempt() {
 if (loginButton) {
     loginButton.disable().on("click", handleLoginAttempt);
 }
-if (usernameInput) {
-    usernameInput.on("keydown", function (e) {
-        if (loginButton && !loginButton.disabled && e.which == 13) handleLoginAttempt();
-    });
-}
-if (passwordInput) {
-    passwordInput.on("keydown", function (e) {
-        if (loginButton && !loginButton.disabled && e.which == 13) handleLoginAttempt();
-    });
-}

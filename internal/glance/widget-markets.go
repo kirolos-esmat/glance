@@ -48,11 +48,6 @@ func FetchUSDExchangeRate(currency string) (float64, error) {
 	}
 	defer resp.Body.Close()
 
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch exchange rate: %w", err)
-	}
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
@@ -128,6 +123,7 @@ type market struct {
 	marketRequest
 	Name           string
 	Currency       string
+	CurrencySymbol string
 	Price          float64
 	PriceHint      int
 	PercentChange  float64
@@ -156,7 +152,6 @@ type marketResponseJson struct {
 				Symbol             string  `json:"symbol"`
 				RegularMarketPrice float64 `json:"regularMarketPrice"`
 				ChartPreviousClose float64 `json:"chartPreviousClose"`
-				ExchangeName       string  `json:"exchangeName"`
 				ShortName          string  `json:"shortName"`
 				PriceHint          int     `json:"priceHint"`
 			} `json:"meta"`
@@ -220,34 +215,29 @@ func fetchMarketsDataFromYahoo(marketRequests []marketRequest, interval MarketDu
 
 		points := svgPolylineCoordsFromYValues(100, 50, maybeCopySliceWithoutZeroValues(prices))
 
-		currency, exists := currencyToSymbol[strings.ToUpper(result.Meta.Currency)]
-		if !exists {
-			currency = result.Meta.Currency
-		}
+		currency := result.Meta.Currency
+		currencySymbol := currencyToSymbol[result.Meta.Currency]
 
 		if marketRequests[i].Currency != "" {
 			exchangeRate, err := FetchUSDExchangeRate(marketRequests[i].Currency)
 			if err != nil {
-				slog.Error("Failed to fetch USD/EUR exchange rate", "error", err)
+				slog.Error("Failed to fetch exchange rate", "error", err)
 				continue
 			}
 
 			if response.Chart.Result[0].Meta.Currency == "USD" {
 				response.Chart.Result[0].Meta.RegularMarketPrice *= exchangeRate
-				currency = currencyToSymbol[marketRequests[i].Currency]
+				currency = marketRequests[i].Currency
+				currencySymbol = currencyToSymbol[marketRequests[i].Currency]
 			}
 		}
 
-		// See https://github.com/glanceapp/glance/issues/757
-		if result.Meta.ExchangeName == "LSE" {
-			currency = ""
-		}
-
 		markets = append(markets, market{
-			marketRequest: marketRequests[i],
-			Price:         result.Meta.RegularMarketPrice,
-			Currency:      currency,
-			PriceHint:     result.Meta.PriceHint,
+			marketRequest:  marketRequests[i],
+			Price:          result.Meta.RegularMarketPrice,
+			CurrencySymbol: currencySymbol,
+			Currency:       currency,
+			PriceHint:      result.Meta.PriceHint,
 			Name: ternary(marketRequests[i].CustomName == "",
 				result.Meta.ShortName,
 				marketRequests[i].CustomName,
