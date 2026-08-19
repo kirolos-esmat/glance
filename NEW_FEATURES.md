@@ -1,7 +1,7 @@
 # ⚡ Glance Pro Edition — Master Feature Blueprint & Architecture
 
 > **The Ultimate Self-Hosted Dashboard Experience**  
-> Integrated with **74 community-driven pull requests**, performance enhancements, enterprise authentication, tabbed widget stacking, and next-generation media/financial widgets.
+> Integrated with **75+ community-driven pull requests**, performance enhancements, enterprise authentication, tabbed widget stacking, native Tautulli/TrueNAS modules, next-generation media/financial widgets, and a modular plug-and-play Custom Widgets library.
 
 ---
 
@@ -30,11 +30,16 @@ graph TB
 
     subgraph WidgetsEngine ["🧩 Enhanced Widget Ecosystem"]
         direction TB
-        subgraph NewWidgets ["🆕 New Widgets"]
+        subgraph NewWidgets ["🆕 Native Widgets"]
             Navidrome["🎵 Navidrome (Subsonic)"]
+            Tautulli["🎬 Tautulli (Plex Streams)"]
+            TrueNAS["🗄️ TrueNAS (Pools & Load)"]
             Markdown["📝 Markdown Engine"]
             Ghostfolio["📈 Ghostfolio Portfolio"]
             QBit["📥 qBittorrent Stats"]
+        end
+        subgraph CustomWidgetsLib ["📦 Custom Widgets Library"]
+            CustomLib["custom-widgets/ (Jellyfin, Immich, Radarr, Sonarr, Tunnels, Tailscale)"]
         end
         subgraph EnhancedWidgets ["⚡ Supercharged Existing"]
             Stack["🗂️ Widget Stacks / Tabs"]
@@ -245,6 +250,8 @@ sequenceDiagram
 
 | Widget | Type | Key Features | PR Reference |
 | :--- | :--- | :--- | :--- |
+| **Tautulli** | `tautulli` | Active Plex stream count, session details, user friendly names, progress bars | PR #1060 |
+| **TrueNAS** | `truenas` | Native TrueNAS Scale pool health statuses, system load average, uptime, alerts | PR #1060 |
 | **Navidrome** | `navidrome` | Live track display, album covers, artist/title metadata, progress bars | PR #1040 |
 | **Markdown** | `markdown` | Native markdown parsing, file embedding, custom notes, links | PR #967 |
 | **Ghostfolio** | `ghostfolio` | Real-time portfolio valuation, performance %, timeframe graphs | PR #925 |
@@ -253,10 +260,50 @@ sequenceDiagram
 | **ControlD DNS** | `dns-stats` | ControlD analytics integration alongside Pi-hole v6 and AdGuard | PR #651, #371 |
 | **Brave Search** | `search` | Privacy-centric web search default with custom placeholders | PR #1028, #751 |
 | **Custom API** | `custom-api` | RegEx replacements, array param parsing, range indexing | PR #746, #580, #542 |
+| **Custom Widgets Lib** | `custom-widgets/` | Plug-and-play modular YAML widgets (Jellyfin, Immich, Radarr, Sonarr, Tunnels) | Library |
 
 ---
 
 ### 4.1 Detailed Widget Configurations
+
+#### 🎬 Tautulli Widget (`type: tautulli`) [PR #1060]
+```yaml
+- type: tautulli
+  title: Plex Streams
+  url: http://192.168.1.112:8181
+  api-key: ${secret:tautulli-api-key}
+  allow-insecure: false
+```
+
+#### 🗄️ TrueNAS Widget (`type: truenas`) [PR #1060]
+```yaml
+- type: truenas
+  title: TrueNAS Scale
+  url: http://192.168.1.112
+  api-key: ${secret:truenas-api-key}
+  allow-insecure: false
+```
+
+#### 📦 Custom Widgets Collection (`custom-widgets/`)
+Modular YAML snippets ready to `$include` or paste into any page:
+```yaml
+# 2x2 Media Stats Grid
+- type: split-column
+  max-columns: 2
+  widgets:
+    - $include: custom-widgets/jellyfin-stats.yml
+    - $include: custom-widgets/immich-stats.yml
+    - $include: custom-widgets/radarr-stats.yml
+    - $include: custom-widgets/sonarr-stats.yml
+
+# Network Tunnels Row
+- type: split-column
+  max-columns: 3
+  widgets:
+    - $include: custom-widgets/cloudflare-tunnel.yml
+    - $include: custom-widgets/tailscale.yml
+    - $include: custom-widgets/netbird.yml
+```
 
 #### 🎵 Navidrome Widget (`type: navidrome`)
 ```yaml
@@ -416,13 +463,14 @@ pages:
 
 ---
 
-## 📜 6. Full Pull Request Ingestion Audit (74 PRs)
+## 📜 6. Full Pull Request Ingestion Audit (75+ PRs)
 
 <details>
-<summary><b>🔍 Click to expand the full catalog of all 74 merged PRs</b></summary>
+<summary><b>🔍 Click to expand the full catalog of all 75+ merged PRs</b></summary>
 
 | PR ID | Category | Summary / Contribution |
 | :--- | :--- | :--- |
+| **#1060** | New Widgets | Native Tautulli Plex Streams & TrueNAS Scale Status / Pool Health Widgets |
 | **#1018** | Authentication | OpenID Connect (OIDC) Single Sign-On Provider Support |
 | **#858** | Security | Per-Page User Access Control (`allowed-users`) |
 | **#1040** | New Widget | Navidrome Subsonic API Music Server Widget |

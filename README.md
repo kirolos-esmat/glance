@@ -2,7 +2,8 @@
 <h1 align="center">Glance — Community Pro Edition</h1>
 <p align="center">
   <a href="#installation">Install</a> •
-  <a href="NEW_FEATURES.md">🚀 New Features (74 PRs)</a> •
+  <a href="NEW_FEATURES.md">🚀 New Features (75+ PRs)</a> •
+  <a href="custom-widgets/README.md">📦 Custom Widgets Lib</a> •
   <a href="docs/configuration.md#configuring-glance">Configuration</a> •
   <a href="https://discord.com/invite/7KQ7Xa9kJd">Discord</a> •
   <a href="https://github.com/sponsors/glanceapp">Sponsor</a>
@@ -13,18 +14,21 @@
   <a href="docs/themes.md">Themes</a>
 </p>
 
-<p align="center">A lightweight, highly customizable dashboard that displays<br> your feeds in a beautiful, streamlined interface — supercharged with <b>74 community features</b>.</p>
+<p align="center">A lightweight, highly customizable dashboard that displays<br> your feeds in a beautiful, streamlined interface — supercharged with <b>75+ community features</b>.</p>
 
 ![](docs/images/readme-main-image.png)
 
 > [!NOTE]
-> **🚀 Enhanced Community Build:** This repository includes **74 merged pull requests** featuring OIDC SSO authentication, per-page access control, tabbed widget stacks, Navidrome, Ghostfolio, Markdown, ICS calendar feeds, ControlD DNS, theme switcher, and more. Read the full [**NEW_FEATURES.md**](NEW_FEATURES.md) for architectural blueprints and complete configuration examples.
+> **🚀 Enhanced Community Build:** This repository includes **75+ merged pull requests** featuring OIDC SSO authentication, per-page access control, tabbed widget stacks, native Tautulli & TrueNAS widgets, Navidrome, Ghostfolio, Markdown, ICS calendar feeds, ControlD DNS, theme switcher, and a plug-and-play [**Custom Widgets Library**](custom-widgets/README.md). Read the full [**NEW_FEATURES.md**](NEW_FEATURES.md) for architectural blueprints and complete configuration examples.
 
 ---
 
 ## Features
 
 ### 🧩 Massive Widget Ecosystem
+* **🎬 Tautulli:** Real-time Plex active stream counts, session details, friendly user names, and progress bars *(New - PR #1060)*
+* **🗄️ TrueNAS:** Native TrueNAS Scale pool health status, system load average, uptime, and pending alerts *(New - PR #1060)*
+* **📦 Custom Widgets Library:** Plug-and-play modular YAML widgets for Jellyfin dynamic sessions, Immich photos/storage, Radarr/Sonarr queues, Cloudflare tunnels, Tailscale, and Netbird *(New - `custom-widgets/`)*
 * **🎵 Navidrome:** Display currently playing music, album covers, and artist metadata from your Subsonic/Navidrome server *(New)*
 * **📈 Ghostfolio:** Live portfolio valuation, asset performance charts, and balances *(New)*
 * **📝 Markdown:** Native markdown rendering and notes embedding directly on your dashboard *(New)*
