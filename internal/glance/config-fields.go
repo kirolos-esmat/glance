@@ -238,7 +238,7 @@ func newCustomIconField(value string) customIconField {
 		field.URL = template.URL(activeCDN + "/npm/@mdi/svg@latest/svg/" + basename + ".svg")
 		field.AutoInvert = true
 	case "sh":
-		field.URL = template.URL("https://cdn.jsdelivr.net/gh/selfhst/icons/" + ext + "/" + basename + "." + ext)
+		field.URL = template.URL("https://cdn.jsdelivr.net/gh/selfhst/icons@main/" + ext + "/" + basename + "." + ext)
 	case "hi":
 		field.AutoInvert = true
 		field.URL = template.URL("https://cdn.jsdelivr.net/npm/heroicons@2.2.0/24/" + basename + ".svg")
