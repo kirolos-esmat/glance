@@ -1,6 +1,6 @@
 module github.com/glanceapp/glance
 
-go 1.27.1
+go 1.27.0
 
 require (
 	github.com/coreos/go-oidc/v3 v3.18.0
