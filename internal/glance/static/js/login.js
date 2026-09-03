@@ -83,22 +83,24 @@ function enableLoginButtonIfCriteriaMet() {
     );
 }
 
-function handleLoginWithEnter(event) {
-    if (event.key !== "Enter") return;
-    if (!loginButton || loginButton.disabled) return;
-
-    document.activeElement.blur();
-    handleLoginAttempt();
+function handleKeydown(event) {
+    if (event.key === "Enter") {
+        const isDisabled = loginButton?.disabled;
+        if (!isDisabled) {
+            document.activeElement?.blur();
+            handleLoginAttempt();
+        }
+    }
 }
 
 if (usernameInput && passwordInput) {
     usernameInput
         .on("input", enableLoginButtonIfCriteriaMet)
-        .on("keydown", handleLoginWithEnter);
+        .on("keydown", handleKeydown);
 
     passwordInput
         .on("input", enableLoginButtonIfCriteriaMet)
-        .on("keydown", handleLoginWithEnter);
+        .on("keydown", handleKeydown);
 }
 
 async function handleLoginAttempt() {
