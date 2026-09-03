@@ -1,0 +1,4 @@
+# Preserve fork-managed deployment and config files during upstream merges
+Dockerfile merge=ours
+Dockerfile.goreleaser merge=ours
+config/glance.yml merge=ours
