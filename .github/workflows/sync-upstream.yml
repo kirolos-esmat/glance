@@ -13,6 +13,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write
 
 jobs:
   sync:
@@ -86,13 +87,14 @@ jobs:
             exit 1
           fi
 
-          echo "==> Fetching upstream/${TARGET_BRANCH}..."
+          echo "==> Fetching upstream/${TARGET_BRANCH} and tags..."
           if git remote | grep -q "^upstream$"; then
             git remote set-url upstream "https://github.com/${PARENT}.git"
           else
             git remote add upstream "https://github.com/${PARENT}.git"
           fi
-          git fetch upstream "${TARGET_BRANCH}"
+          git fetch upstream "${TARGET_BRANCH}" --tags
+          git push origin --tags 2>/dev/null || true
 
           echo "==> Aligning local branch to origin/${TARGET_BRANCH}..."
           git checkout -B "${TARGET_BRANCH}" "origin/${TARGET_BRANCH}"
@@ -142,9 +144,13 @@ jobs:
             echo "Fork is behind upstream with no custom commits. Fast-forwarding..."
             git merge --ff-only "upstream/${TARGET_BRANCH}"
             git push origin "${TARGET_BRANCH}"
+            git push origin --tags 2>/dev/null || true
             NEW_FORK_SHA=$(git rev-parse HEAD)
             NEW_FORK_SHORT=$(git rev-parse --short HEAD)
             echo "Fork successfully fast-forwarded to ${NEW_FORK_SHORT}."
+
+            echo "==> Triggering Docker image build workflow..."
+            gh workflow run docker-publish.yml --ref "${TARGET_BRANCH}" || echo "Warning: Could not trigger docker-publish.yml"
 
             cat <<EOF >> "$SUMMARY_FILE"
           ## Upstream Sync
@@ -200,6 +206,12 @@ jobs:
                 sed -i '/<<<<<<< HEAD/d;/=======/d;/>>>>>>> upstream\/main/d' internal/glance/config-fields.go 2>/dev/null || true
                 git add internal/glance/config-fields.go 2>/dev/null || true
               fi
+
+              # 6. Handle cli.go
+              if git diff --name-only --diff-filter=U | grep -q "internal/glance/cli.go"; then
+                git checkout "upstream/${TARGET_BRANCH}" -- internal/glance/cli.go 2>/dev/null || true
+                git add internal/glance/cli.go 2>/dev/null || true
+              fi
             }
 
             MERGE_SUCCESS=false
@@ -232,9 +244,13 @@ jobs:
             if [ "$MERGE_SUCCESS" = "true" ]; then
               echo "Merge succeeded and verified. Pushing to origin/${TARGET_BRANCH}..."
               git push origin "${TARGET_BRANCH}"
+              git push origin --tags 2>/dev/null || true
               NEW_FORK_SHA=$(git rev-parse HEAD)
               NEW_FORK_SHORT=$(git rev-parse --short HEAD)
               echo "Merge successfully pushed. New commit: ${NEW_FORK_SHORT}."
+
+              echo "==> Triggering Docker image build workflow..."
+              gh workflow run docker-publish.yml --ref "${TARGET_BRANCH}" || echo "Warning: Could not trigger docker-publish.yml"
 
               cat <<EOF >> "$SUMMARY_FILE"
           ## Upstream Sync
